@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Icon from '@/components/ui/icon';
+import { chatApi } from '@/lib/api';
+import type { RoomPlayer } from '@/hooks/useRoom';
 
 interface Message {
   id: number;
@@ -7,47 +9,62 @@ interface Message {
   text: string;
   time: string;
   type: 'user' | 'system' | 'me';
-  avatar: string;
+}
+
+interface ChatProps {
+  myName: string;
+  players: RoomPlayer[];
 }
 
 const AVATARS = ['🎩', '♠', '♥', '♦', '♣', '🃏', '👑', '🎲'];
 
-const INITIAL_MESSAGES: Message[] = [
-  { id: 1, author: 'Система', text: 'Добро пожаловать в Royal Table!', time: '21:30', type: 'system', avatar: '♠' },
-  { id: 2, author: 'Alex_Pro', text: 'Всем привет, готов к игре 🃏', time: '21:31', type: 'user', avatar: '🎩' },
-  { id: 3, author: 'Viktor88', text: 'ва-банк будем?', time: '21:33', type: 'user', avatar: '♦' },
-  { id: 4, author: 'Marina_K', text: 'хахаха нет уж, пас', time: '21:35', type: 'user', avatar: '♥' },
-  { id: 5, author: 'Alex_Pro', text: 'нарисуй что-нибудь на доске пока ждём', time: '21:38', type: 'user', avatar: '🎩' },
-  { id: 6, author: 'Система', text: 'Viktor88 сделал рейз 200 ₽', time: '21:42', type: 'system', avatar: '♠' },
-  { id: 7, author: 'Дмитрий', text: 'блеф 100%', time: '21:43', type: 'user', avatar: '♣' },
-];
-
-const ONLINE_USERS = ['Alex_Pro', 'Viktor88', 'Marina_K', 'Дмитрий', 'Svetlana', 'Вы'];
-
-export default function Chat() {
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+export default function Chat({ myName, players }: ChatProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [myName] = useState('Вы');
   const [showOnline, setShowOnline] = useState(false);
+  const [sending, setSending] = useState(false);
+  const lastIdRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchMessages = useCallback(async () => {
+    try {
+      const data = await chatApi.getMessages(lastIdRef.current);
+      if (data.messages && data.messages.length > 0) {
+        const newMsgs: Message[] = data.messages.map((m: { id: number; author: string; text: string; time: string; type: string }) => ({
+          id: m.id,
+          author: m.author,
+          text: m.text,
+          time: m.time,
+          type: m.type === 'system' ? 'system' : m.author === myName ? 'me' : 'user',
+        }));
+        setMessages(prev => [...prev, ...newMsgs]);
+        lastIdRef.current = data.messages[data.messages.length - 1].id;
+      }
+    } catch (_e) { /* ignore */ }
+  }, [myName]);
+
+  useEffect(() => {
+    fetchMessages();
+    pollRef.current = setInterval(fetchMessages, 2500);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [fetchMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    const now = new Date();
-    const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
-    setMessages(prev => [...prev, {
-      id: Date.now(),
-      author: myName,
-      text: input.trim(),
-      time,
-      type: 'me',
-      avatar: '👑',
-    }]);
+  const sendMessage = async () => {
+    if (!input.trim() || sending) return;
+    const text = input.trim();
     setInput('');
+    setSending(true);
+    try {
+      await chatApi.send(text);
+      await fetchMessages();
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -65,7 +82,7 @@ export default function Chat() {
           <h3 className="font-cormorant font-semibold text-base text-[hsl(var(--foreground))]">Чат комнаты</h3>
           <div className="flex items-center gap-1.5 mt-0.5">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{ONLINE_USERS.length} онлайн</span>
+            <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{players.length} онлайн</span>
           </div>
         </div>
         <button
@@ -77,43 +94,49 @@ export default function Chat() {
       </div>
 
       {showOnline ? (
-        /* Online users list */
         <div className="flex-1 p-3 overflow-y-auto">
           <div className="text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] font-semibold mb-3">Участники</div>
+          {players.length === 0 && (
+            <div className="text-xs text-[hsl(var(--muted-foreground))] text-center py-4">Никого нет...</div>
+          )}
           <div className="space-y-2">
-            {ONLINE_USERS.map((user, i) => (
-              <div key={user} className="flex items-center gap-3 animate-fade-in" style={{ animationDelay: `${i * 50}ms` }}>
+            {players.map((user, i) => (
+              <div key={user.id} className="flex items-center gap-3 animate-fade-in" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="w-7 h-7 rounded-full bg-[hsl(var(--accent))] flex items-center justify-center text-sm">
                   {AVATARS[i % AVATARS.length]}
                 </div>
-                <span className={`text-sm ${user === 'Вы' ? 'text-[hsl(var(--primary))] font-medium' : 'text-[hsl(var(--foreground))]'}`}>
-                  {user}
-                </span>
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400" />
+                <div className="flex-1 min-w-0">
+                  <span className={`text-sm truncate block ${user.name === myName ? 'text-[hsl(var(--primary))] font-medium' : 'text-[hsl(var(--foreground))]'}`}>
+                    {user.name} {user.name === myName && '(вы)'}
+                  </span>
+                  <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{user.chips.toLocaleString()} ₽</span>
+                </div>
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
               </div>
             ))}
           </div>
         </div>
       ) : (
-        /* Messages */
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+          {messages.length === 0 && (
+            <div className="text-center text-xs text-[hsl(var(--muted-foreground))] py-8">Сообщений пока нет</div>
+          )}
           {messages.map((msg, i) => {
             if (msg.type === 'system') {
               return (
-                <div key={msg.id} className="text-center animate-fade-in" style={{ animationDelay: `${i * 30}ms` }}>
+                <div key={msg.id} className="text-center animate-fade-in" style={{ animationDelay: `${i * 20}ms` }}>
                   <span className="text-[10px] text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))] px-2 py-0.5 rounded-full">
                     {msg.text}
                   </span>
                 </div>
               );
             }
-
             const isMe = msg.type === 'me';
             return (
               <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''} animate-fade-in`}
-                style={{ animationDelay: `${i * 30}ms` }}>
+                style={{ animationDelay: `${i * 20}ms` }}>
                 <div className="w-6 h-6 rounded-full bg-[hsl(var(--accent))] flex items-center justify-center text-xs shrink-0 mt-0.5">
-                  {msg.avatar}
+                  {AVATARS[Math.abs((msg.author.charCodeAt(0) || 0)) % AVATARS.length]}
                 </div>
                 <div className={`max-w-[75%] ${isMe ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
                   {!isMe && (
@@ -135,24 +158,24 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Input */}
       <div className="p-3 border-t border-[hsl(var(--border))]">
         <div className="flex gap-2 items-end">
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Написать..."
+            placeholder={myName ? 'Написать...' : 'Войдите чтобы писать'}
+            disabled={!myName}
             rows={1}
-            className="flex-1 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-xl px-3 py-2 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:border-[hsl(var(--primary))] resize-none leading-snug transition-colors"
+            className="flex-1 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-xl px-3 py-2 text-sm text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:border-[hsl(var(--primary))] resize-none leading-snug transition-colors disabled:opacity-50"
             style={{ maxHeight: 80 }}
           />
           <button
             onClick={sendMessage}
-            disabled={!input.trim()}
+            disabled={!input.trim() || sending || !myName}
             className="p-2 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] disabled:opacity-40 hover:opacity-90 transition-opacity shrink-0"
           >
-            <Icon name="Send" size={15} />
+            <Icon name={sending ? 'Loader' : 'Send'} size={15} className={sending ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>

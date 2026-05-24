@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "GET poker state",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"phase": "waiting"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
