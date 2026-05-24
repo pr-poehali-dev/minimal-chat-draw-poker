@@ -47,9 +47,7 @@ export default function AuthScreen({ onRegister, onLogin, loading, error, onClea
             <span className="text-red-400">♦</span>
             <span className="text-[hsl(var(--foreground))]">♣</span>
           </div>
-          <h1 className="font-cormorant text-5xl font-bold text-[hsl(var(--foreground))] tracking-wide leading-tight">
-            Royal <span className="text-[hsl(var(--primary))]">Table</span>
-          </h1>
+          <h1 className="font-cormorant text-5xl font-bold text-[hsl(var(--foreground))] tracking-wide leading-tight">Гей Клуб</h1>
           <p className="text-[hsl(var(--muted-foreground))] text-sm mt-2 tracking-wider">
             Покер · Рисование · Общение
           </p>
