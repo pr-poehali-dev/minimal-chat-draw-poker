@@ -45,9 +45,7 @@ export default function Index() {
         style={{ background: 'linear-gradient(90deg, hsl(var(--card)) 0%, hsl(160,18%,8%) 100%)' }}>
         <div className="flex items-center gap-3">
           <span className="text-[hsl(var(--primary))] text-lg">♠</span>
-          <h1 className="font-cormorant font-bold text-xl text-[hsl(var(--foreground))] tracking-wide">
-            Royal <span className="text-[hsl(var(--primary))]">Table</span>
-          </h1>
+          <h1 className="font-cormorant font-bold text-xl text-[hsl(var(--foreground))] tracking-wide">Koлбареzz 2012 </h1>
           <div className="hidden sm:flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-[hsl(var(--muted))]">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{players.length} онлайн</span>
