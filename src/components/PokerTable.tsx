@@ -218,22 +218,16 @@ export default function PokerTable({ myId, joined, atTable, onSit, onStand }: Po
         </div>
       ) : showReplay ? (
         <div className="flex-1 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 flex flex-col items-center justify-center gap-4">
-          <div className="text-[hsl(var(--muted-foreground))] text-sm">Реплей последней раздачи</div>
+          <div className="text-[hsl(var(--muted-foreground))] text-sm">57.122865, 65.588077</div>
           <div className="flex gap-2">
             {(game.community_cards.slice(0, 3).length > 0 ? game.community_cards.slice(0, 3) : [{}, {}, {}]).map((c, i) => (
               <PlayingCard key={i} card={c} delay={i * 150} />
             ))}
           </div>
           <div className="flex gap-3">
-            <button className="px-4 py-1.5 rounded-lg bg-[hsl(var(--muted))] text-xs hover:bg-[hsl(var(--accent))] transition-colors">
-              <Icon name="SkipBack" size={12} className="inline mr-1" />Назад
-            </button>
-            <button className="px-4 py-1.5 rounded-lg bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-xs font-semibold">
-              <Icon name="Play" size={12} className="inline mr-1" />Воспроизвести
-            </button>
-            <button className="px-4 py-1.5 rounded-lg bg-[hsl(var(--muted))] text-xs hover:bg-[hsl(var(--accent))] transition-colors">
-              <Icon name="SkipForward" size={12} className="inline mr-1" />Вперёд
-            </button>
+            <button className="px-4 py-1.5 rounded-lg text-xs hover:bg-[hsl(var(--accent))] transition-colors bg-[#000000] text-lime-300">люк</button>
+            <button className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-[#000000] text-amber-400">...</button>
+            <button className="px-4 py-1.5 rounded-lg text-xs hover:bg-[hsl(var(--accent))] transition-colors bg-[#000000] text-red-600">???</button>
           </div>
           <div className="w-full bg-[hsl(var(--muted))] rounded-full h-1">
             <div className="bg-[hsl(var(--primary))] h-1 rounded-full w-2/5" />
