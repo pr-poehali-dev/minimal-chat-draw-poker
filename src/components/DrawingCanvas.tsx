@@ -122,7 +122,7 @@ export default function DrawingCanvas() {
   return (
     <div className="flex flex-col h-full gap-2">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap bg-gray-700">
         {/* Tools */}
         <div className="flex gap-1 bg-[hsl(var(--muted))] p-1 rounded-lg">
           {([['pen', 'Pen'], ['eraser', 'Eraser'], ['fill', 'PaintBucket'], ['line', 'Minus']] as [Tool, string][]).map(([t, icon]) => (

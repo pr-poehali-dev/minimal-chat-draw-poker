@@ -97,7 +97,7 @@ export default function Index() {
 
         {/* Desktop */}
         <div className="hidden sm:flex flex-1 overflow-hidden">
-          <div className="flex-1 flex flex-col overflow-hidden p-3 gap-3 min-w-0">
+          <div className="flex-1 flex flex-col overflow-hidden p-3 gap-3 min-w-0 bg-slate-600">
             <div className="flex-[1.4] min-h-0 overflow-auto">
               <PokerTable
                 myId={user.id}
