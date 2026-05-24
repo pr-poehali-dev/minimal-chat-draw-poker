@@ -39,6 +39,9 @@ interface GameState {
 interface PokerTableProps {
   myId: number | null;
   joined: boolean;
+  atTable: boolean;
+  onSit: () => Promise<void>;
+  onStand: () => Promise<void>;
 }
 
 const SEAT_POSITIONS = [
@@ -115,7 +118,7 @@ function PlayerSeat({ seat, isMe, isActive }: { seat: Seat; isMe: boolean; isAct
   );
 }
 
-export default function PokerTable({ myId, joined }: PokerTableProps) {
+export default function PokerTable({ myId, joined, atTable, onSit, onStand }: PokerTableProps) {
   const [game, setGame] = useState<GameState>({ phase: 'waiting', pot: 0, community_cards: [], seats: [], actions: [] });
   const [showHistory, setShowHistory] = useState(false);
   const [showReplay, setShowReplay] = useState(false);
@@ -246,13 +249,31 @@ export default function PokerTable({ myId, joined }: PokerTableProps) {
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                 <div className="text-[hsl(var(--primary))] font-cormorant text-2xl font-semibold">Ожидание игроков</div>
                 <div className="text-sm text-[hsl(45,30%,70%)] opacity-70">
-                  {game.seats.length === 0 ? 'Никого нет за столом' : `За столом: ${game.seats.length} игр.`}
+                  {game.seats.length === 0 ? 'Никого нет за столом' : `За столом: ${game.seats.length} чел.`}
                 </div>
-                {joined && (
-                  <button onClick={startGame} disabled={actionLoading}
-                    className="px-6 py-2 rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity animate-pulse-ring">
-                    {actionLoading ? 'Запуск...' : 'Начать раздачу'}
+                {joined && !atTable && (
+                  <button onClick={onSit} disabled={actionLoading}
+                    className="px-6 py-2 rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity gold-glow">
+                    Сесть за стол
                   </button>
+                )}
+                {joined && atTable && (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="text-xs text-green-400 font-medium flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                      Вы за столом
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={startGame} disabled={actionLoading}
+                        className="px-5 py-1.5 rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity">
+                        {actionLoading ? 'Запуск...' : 'Начать раздачу'}
+                      </button>
+                      <button onClick={onStand} disabled={actionLoading}
+                        className="px-4 py-1.5 rounded-full border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] text-sm hover:border-red-500 hover:text-red-400 transition-colors">
+                        Встать
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             ) : (
@@ -313,9 +334,21 @@ export default function PokerTable({ myId, joined }: PokerTableProps) {
           )}
 
           {game.phase !== 'waiting' && !isPlaying && joined && (
-            <div className="text-center text-xs text-[hsl(var(--muted-foreground))] py-2">
-              Вы не участвуете в этой раздаче — ждите следующей
+            <div className="flex items-center justify-between text-xs text-[hsl(var(--muted-foreground))] py-2 px-1">
+              <span>Вы не участвуете — ждите следующей раздачи</span>
+              {atTable && (
+                <button onClick={onStand}
+                  className="text-xs px-3 py-1 rounded-full border border-[hsl(var(--border))] hover:border-red-500 hover:text-red-400 transition-colors">
+                  Встать
+                </button>
+              )}
             </div>
+          )}
+          {game.phase !== 'waiting' && isPlaying && atTable && game.seats.find(s => s.player_id === myId)?.status === 'folded' && (
+            <button onClick={onStand}
+              className="self-end text-xs px-3 py-1 rounded-full border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:border-red-500 hover:text-red-400 transition-colors">
+              Встать со стола
+            </button>
           )}
         </div>
       )}

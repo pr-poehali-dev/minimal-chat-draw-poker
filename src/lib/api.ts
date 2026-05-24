@@ -1,17 +1,20 @@
 import func2url from '../../backend/func2url.json';
 
+const AUTH_URL = (func2url as Record<string, string>).auth;
 const ROOM_URL = func2url.room;
 const POKER_URL = func2url.poker;
 const CHAT_URL = func2url.chat;
 
-// Session ID — хранится в localStorage
 export function getSessionId(): string {
-  let sid = localStorage.getItem('royal_session_id');
-  if (!sid) {
-    sid = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-    localStorage.setItem('royal_session_id', sid);
-  }
-  return sid;
+  return localStorage.getItem('royal_session_id') || '';
+}
+
+export function setSessionId(sid: string) {
+  localStorage.setItem('royal_session_id', sid);
+}
+
+export function clearSession() {
+  localStorage.removeItem('royal_session_id');
 }
 
 function headers() {
@@ -21,16 +24,52 @@ function headers() {
   };
 }
 
+// Auth
+export const authApi = {
+  me: () =>
+    fetch(AUTH_URL, { headers: headers() }).then(r => r.json()),
+
+  register: (username: string, password: string) =>
+    fetch(AUTH_URL, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ action: 'register', username, password }),
+    }).then(r => r.json()),
+
+  login: (username: string, password: string) =>
+    fetch(AUTH_URL, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ action: 'login', username, password }),
+    }).then(r => r.json()),
+
+  logout: () =>
+    fetch(AUTH_URL, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ action: 'logout' }),
+    }).then(r => r.json()),
+};
+
 // Room
 export const roomApi = {
-  join: (name: string) =>
-    fetch(`${ROOM_URL}/join`, { method: 'POST', headers: headers(), body: JSON.stringify({ name }) }).then(r => r.json()),
-
-  leave: () =>
-    fetch(`${ROOM_URL}/leave`, { method: 'POST', headers: headers(), body: '{}' }).then(r => r.json()),
-
   getPlayers: () =>
     fetch(ROOM_URL, { headers: headers() }).then(r => r.json()),
+
+  ping: () =>
+    fetch(ROOM_URL, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ action: 'ping' }),
+    }).then(r => r.json()),
+
+  sit: () =>
+    fetch(ROOM_URL, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ action: 'sit' }),
+    }).then(r => r.json()),
+
+  stand: () =>
+    fetch(ROOM_URL, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ action: 'stand' }),
+    }).then(r => r.json()),
 };
 
 // Poker
@@ -39,10 +78,16 @@ export const pokerApi = {
     fetch(POKER_URL, { headers: headers() }).then(r => r.json()),
 
   start: () =>
-    fetch(`${POKER_URL}/start`, { method: 'POST', headers: headers(), body: '{}' }).then(r => r.json()),
+    fetch(POKER_URL, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ action: 'start' }),
+    }).then(r => r.json()),
 
   action: (action: string, amount = 0) =>
-    fetch(`${POKER_URL}/action`, { method: 'POST', headers: headers(), body: JSON.stringify({ action, amount }) }).then(r => r.json()),
+    fetch(POKER_URL, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ action, amount }),
+    }).then(r => r.json()),
 };
 
 // Chat
@@ -51,5 +96,8 @@ export const chatApi = {
     fetch(`${CHAT_URL}?since_id=${sinceId}`, { headers: headers() }).then(r => r.json()),
 
   send: (text: string) =>
-    fetch(CHAT_URL, { method: 'POST', headers: headers(), body: JSON.stringify({ text }) }).then(r => r.json()),
+    fetch(CHAT_URL, {
+      method: 'POST', headers: headers(),
+      body: JSON.stringify({ text }),
+    }).then(r => r.json()),
 };

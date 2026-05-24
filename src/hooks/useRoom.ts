@@ -5,15 +5,11 @@ export interface RoomPlayer {
   id: number;
   name: string;
   chips: number;
-  online: boolean;
+  at_table: boolean;
 }
 
-export function useRoom() {
-  const [joined, setJoined] = useState(false);
-  const [myName, setMyName] = useState('');
-  const [myId, setMyId] = useState<number | null>(null);
+export function useRoom(loggedIn: boolean) {
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
-  const [loading, setLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchPlayers = useCallback(async () => {
@@ -23,48 +19,12 @@ export function useRoom() {
     } catch (_e) { /* ignore */ }
   }, []);
 
-  const join = useCallback(async (name: string) => {
-    setLoading(true);
-    try {
-      const data = await roomApi.join(name);
-      if (data.session_id) {
-        localStorage.setItem('royal_session_id', data.session_id);
-      }
-      setMyName(data.name || name);
-      setMyId(data.player_id || null);
-      setJoined(true);
-      await fetchPlayers();
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchPlayers]);
-
-  const leave = useCallback(async () => {
-    await roomApi.leave();
-    setJoined(false);
-    setMyName('');
-    setMyId(null);
-    setPlayers([]);
-  }, []);
-
-  // Восстановить сессию при загрузке
-   
   useEffect(() => {
-    const sid = localStorage.getItem('royal_session_id');
-    const savedName = localStorage.getItem('royal_player_name');
-    if (sid && savedName) {
-      join(savedName);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!joined) return;
-    localStorage.setItem('royal_player_name', myName);
+    if (!loggedIn) { setPlayers([]); return; }
+    fetchPlayers();
     pollRef.current = setInterval(fetchPlayers, 5000);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [joined, myName, fetchPlayers]);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [loggedIn, fetchPlayers]);
 
-  return { joined, myName, myId, players, loading, join, leave };
+  return { players, fetchPlayers };
 }

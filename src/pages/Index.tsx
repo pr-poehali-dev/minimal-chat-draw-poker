@@ -2,69 +2,40 @@ import { useState } from 'react';
 import PokerTable from '@/components/PokerTable';
 import DrawingCanvas from '@/components/DrawingCanvas';
 import Chat from '@/components/Chat';
+import AuthScreen from '@/components/AuthScreen';
 import Icon from '@/components/ui/icon';
+import { useAuth } from '@/hooks/useAuth';
 import { useRoom } from '@/hooks/useRoom';
 
-function JoinScreen({ onJoin, loading }: { onJoin: (name: string) => void; loading: boolean }) {
-  const [name, setName] = useState('');
-
-  const submit = () => {
-    if (name.trim()) onJoin(name.trim());
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))]"
-      style={{ backgroundImage: 'radial-gradient(ellipse at 50% 50%, hsl(160,30%,10%) 0%, hsl(var(--background)) 70%)' }}>
-      <div className="flex flex-col items-center gap-8 animate-fade-in">
-        {/* Logo */}
-        <div className="text-center">
-          <div className="text-[hsl(var(--primary))] text-6xl mb-3">♠</div>
-          <h1 className="font-cormorant text-5xl font-bold text-[hsl(var(--foreground))] tracking-wide">
-            Royal <span className="text-[hsl(var(--primary))]">Table</span>
-          </h1>
-          <p className="text-[hsl(var(--muted-foreground))] text-sm mt-2">Покер · Рисование · Общение</p>
-        </div>
-
-        {/* Form */}
-        <div className="w-72 flex flex-col gap-3">
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && submit()}
-            placeholder="Ваш никнейм"
-            maxLength={30}
-            autoFocus
-            className="w-full bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-xl px-4 py-3 text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:border-[hsl(var(--primary))] text-center text-base transition-colors"
-          />
-          <button
-            onClick={submit}
-            disabled={!name.trim() || loading}
-            className="w-full py-3 rounded-xl bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] font-semibold text-base disabled:opacity-40 hover:opacity-90 transition-opacity gold-glow"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <Icon name="Loader" size={16} className="animate-spin" />Вход...
-              </span>
-            ) : 'Войти в комнату'}
-          </button>
-        </div>
-
-        {/* Suits decoration */}
-        <div className="flex gap-6 text-2xl opacity-20">
-          <span>♠</span><span className="text-red-400">♥</span><span className="text-red-400">♦</span><span>♣</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Index() {
-  const { joined, myName, myId, players, loading, join, leave } = useRoom();
+  const { user, loading, error, setError, register, login, logout, sit, stand } = useAuth();
+  const { players } = useRoom(!!user);
   const [mobileTab, setMobileTab] = useState<'poker' | 'canvas' | 'chat'>('poker');
   const [chatOpen, setChatOpen] = useState(true);
 
-  if (!joined) {
-    return <JoinScreen onJoin={join} loading={loading} />;
+  // Загрузка сессии
+  if (loading && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))]">
+        <div className="flex flex-col items-center gap-4">
+          <span className="text-[hsl(var(--primary))] text-4xl animate-pulse">♠</span>
+          <span className="text-xs text-[hsl(var(--muted-foreground))]">Загрузка...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Экран входа / регистрации
+  if (!user) {
+    return (
+      <AuthScreen
+        onRegister={register}
+        onLogin={login}
+        loading={loading}
+        error={error}
+        onClearError={() => setError('')}
+      />
+    );
   }
 
   return (
@@ -79,32 +50,39 @@ export default function Index() {
           </h1>
           <div className="hidden sm:flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded-full bg-[hsl(var(--muted))]">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-[10px] text-[hsl(var(--muted-foreground))]">Комната №1</span>
+            <span className="text-[10px] text-[hsl(var(--muted-foreground))]">{players.length} онлайн</span>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-3 text-xs text-[hsl(var(--muted-foreground))]">
-            <span className="flex items-center gap-1.5">
-              <Icon name="Users" size={12} />{players.length} онлайн
-            </span>
-            <span className="text-[hsl(var(--primary))] font-medium">{myName}</span>
+          {/* Имя + фишки */}
+          <div className="hidden sm:flex flex-col items-end">
+            <span className="text-xs font-semibold text-[hsl(var(--foreground))]">{user.username}</span>
+            <span className="text-[10px] text-[hsl(var(--primary))]">{user.chips.toLocaleString()} ₽</span>
           </div>
-          <button
-            onClick={() => setChatOpen(!chatOpen)}
-            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${chatOpen ? 'bg-[hsl(var(--accent))] text-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'}`}
-          >
+
+          {/* Статус за столом */}
+          {user.at_table && (
+            <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full bg-green-900/30 border border-green-800/50">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-[10px] text-green-400">За столом</span>
+            </div>
+          )}
+
+          <button onClick={() => setChatOpen(!chatOpen)}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${chatOpen ? 'bg-[hsl(var(--accent))] text-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'}`}>
             <Icon name="MessageSquare" size={13} />Чат
           </button>
-          <button
-            onClick={leave}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-[hsl(var(--muted-foreground))] hover:text-red-400 transition-colors"
-          >
-            <Icon name="LogOut" size={13} />
+
+          <button onClick={logout}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-[hsl(var(--muted-foreground))] hover:text-red-400 transition-colors"
+            title="Выйти">
+            <Icon name="LogOut" size={14} />
           </button>
         </div>
       </header>
 
-      {/* Mobile tab bar */}
+      {/* Mobile tabs */}
       <div className="sm:hidden flex border-b border-[hsl(var(--border))] shrink-0 bg-[hsl(var(--card))]">
         {(['poker', 'canvas', 'chat'] as const).map(tab => (
           <button key={tab} onClick={() => setMobileTab(tab)}
@@ -114,18 +92,25 @@ export default function Index() {
         ))}
       </div>
 
-      {/* Main layout */}
+      {/* Layout */}
       <div className="flex-1 flex overflow-hidden">
+
         {/* Desktop */}
         <div className="hidden sm:flex flex-1 overflow-hidden">
           <div className="flex-1 flex flex-col overflow-hidden p-3 gap-3 min-w-0">
             <div className="flex-[1.4] min-h-0 overflow-auto">
-              <PokerTable myId={myId} joined={joined} />
+              <PokerTable
+                myId={user.id}
+                joined={true}
+                atTable={user.at_table}
+                onSit={sit}
+                onStand={stand}
+              />
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <div className="flex-1 h-px bg-[hsl(var(--border))]" />
               <span className="text-[10px] uppercase tracking-widest text-[hsl(var(--muted-foreground))] font-semibold flex items-center gap-1.5">
-                <span>🎨</span> Совместный холст
+                🎨 Совместный холст
               </span>
               <div className="flex-1 h-px bg-[hsl(var(--border))]" />
             </div>
@@ -136,7 +121,7 @@ export default function Index() {
 
           {chatOpen && (
             <div className="w-72 shrink-0 border-l border-[hsl(var(--border))] flex flex-col bg-[hsl(var(--card))] animate-fade-in">
-              <Chat myName={myName} players={players} />
+              <Chat myName={user.username} players={players} />
             </div>
           )}
         </div>
@@ -145,7 +130,7 @@ export default function Index() {
         <div className="sm:hidden flex-1 overflow-hidden">
           {mobileTab === 'poker' && (
             <div className="h-full p-3 overflow-auto">
-              <PokerTable myId={myId} joined={joined} />
+              <PokerTable myId={user.id} joined={true} atTable={user.at_table} onSit={sit} onStand={stand} />
             </div>
           )}
           {mobileTab === 'canvas' && (
@@ -155,7 +140,7 @@ export default function Index() {
           )}
           {mobileTab === 'chat' && (
             <div className="h-full flex flex-col">
-              <Chat myName={myName} players={players} />
+              <Chat myName={user.username} players={players} />
             </div>
           )}
         </div>
