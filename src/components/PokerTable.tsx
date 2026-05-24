@@ -175,7 +175,7 @@ export default function PokerTable({ myId, joined, atTable, onSit, onStand }: Po
     <div className="flex flex-col h-full gap-2">
       {/* Header */}
       <div className="flex items-center justify-between px-1">
-        <h2 className="font-cormorant text-xl font-semibold text-[hsl(var(--primary))]">Royal Table</h2>
+        <h2 className="font-cormorant text-xl font-semibold text-[hsl(var(--primary))]">не работает</h2>
         <div className="flex gap-2">
           <button onClick={() => setShowHistory(!showHistory)}
             className={`text-xs px-3 py-1 rounded-full border transition-colors ${showHistory ? 'border-[hsl(var(--primary))] text-[hsl(var(--primary))]' : 'border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]'}`}>
